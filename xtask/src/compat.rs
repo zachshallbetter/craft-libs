@@ -15,6 +15,8 @@ pub struct CompatConfig {
     pub consumers_dir: PathBuf,
     pub skip_baseline: bool,
     pub dry_run: bool,
+    pub all_targets: bool,
+    pub quick: bool,
     pub json_output: bool,
     pub output_file: Option<PathBuf>,
 }
@@ -364,6 +366,17 @@ pub fn run_compat(root_dir: &Path, config: CompatConfig) -> Result<bool, String>
         println!("  Baseline commit:       {}{}", &baseline_commit[0..8], if consumer_is_dirty { " (DIRTY)" } else { "" });
         println!("  Baseline dependency:   {}", baseline_resolved);
 
+        let shared_target_dir = repo_dir.join("target");
+        let mut test_args: Vec<String> = if config.all_targets {
+            vec!["test".into(), "-p".into(), spec.ui_crate.to_string()]
+        } else {
+            vec!["test".into(), "-p".into(), spec.ui_crate.to_string(), "--lib".into()]
+        };
+
+        if config.quick {
+            test_args.extend(["--config".into(), "profile.dev.package.\"*\".opt-level=0".into()]);
+        }
+
         let baseline_start = Instant::now();
         let mut baseline_cmd_str = None;
         let mut baseline_code = None;
@@ -374,10 +387,10 @@ pub fn run_compat(root_dir: &Path, config: CompatConfig) -> Result<bool, String>
             println!("  Baseline execution:    SKIPPED (dry run)");
             "PASS".to_string()
         } else {
-            let cmd_text = format!("cargo test -p {}", spec.ui_crate);
+            let cmd_text = format!("cargo {}", test_args.join(" "));
             baseline_cmd_str = Some(cmd_text);
             print!("  Running baseline tests: ");
-            let out = Command::new("cargo").current_dir(&repo_dir).args(["test", "-p", spec.ui_crate]).output();
+            let out = Command::new("cargo").current_dir(&repo_dir).args(&test_args).env("CARGO_TARGET_DIR", &shared_target_dir).output();
 
             match out {
                 Ok(o) if o.status.success() => {
@@ -454,7 +467,9 @@ pub fn run_compat(root_dir: &Path, config: CompatConfig) -> Result<bool, String>
         println!("  Candidate dependency:  {}", candidate_resolved);
 
         let candidate_start = Instant::now();
-        let cand_cmd_text = format!("cargo test -p {} --config '{}'", spec.ui_crate, patch_config);
+        let mut cand_args = test_args.clone();
+        cand_args.extend(["--config".into(), patch_config.clone()]);
+        let cand_cmd_text = format!("cargo {}", cand_args.join(" "));
         let mut candidate_code = None;
         let mut log_path = None;
 
@@ -465,7 +480,7 @@ pub fn run_compat(root_dir: &Path, config: CompatConfig) -> Result<bool, String>
             "PASS".to_string()
         } else {
             print!("  Running candidate tests: ");
-            let out = Command::new("cargo").current_dir(&cand_worktree_dir).args(["test", "-p", spec.ui_crate, "--config", &patch_config]).output();
+            let out = Command::new("cargo").current_dir(&cand_worktree_dir).args(&cand_args).env("CARGO_TARGET_DIR", &shared_target_dir).output();
 
             let log_file_name = format!("{consumer_name}-candidate.log");
             let target_log = logs_dir.join(&log_file_name);

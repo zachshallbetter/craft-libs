@@ -21,6 +21,8 @@ options for `compat`:
   --consumers-dir <DIR> Directory containing consumer checkouts (default: ..)
   --skip-baseline       Skip running baseline checks, only test candidate revision
   --dry-run             Verify worktree creation and dependency resolution without running test suite
+  --all-targets         Test all targets including doc-tests and integration tests (default: unit/lib only)
+  --quick               Override dev profile optimization (opt-level = 0) for fast dependency compilation
   --json                Emit machine-readable JSON report to stdout
   --output <FILE>       File path to write JSON report (default: target/compat/report.json)
 ";
@@ -43,6 +45,8 @@ fn main() -> ExitCode {
             let mut consumers_dir = root.parent().unwrap_or(&root).to_path_buf();
             let mut skip_baseline = false;
             let mut dry_run = false;
+            let mut all_targets = false;
+            let mut quick = false;
             let mut json_output = false;
             let mut output_file = None;
 
@@ -69,6 +73,8 @@ fn main() -> ExitCode {
                     }
                     "--skip-baseline" => skip_baseline = true,
                     "--dry-run" => dry_run = true,
+                    "--all-targets" => all_targets = true,
+                    "--quick" => quick = true,
                     "--json" => json_output = true,
                     "--output" => {
                         if i + 1 < args.len() {
@@ -88,7 +94,17 @@ fn main() -> ExitCode {
                 i += 1;
             }
 
-            let config = CompatConfig { candidate_revision: revision, consumers, consumers_dir, skip_baseline, dry_run, json_output, output_file };
+            let config = CompatConfig {
+                candidate_revision: revision,
+                consumers,
+                consumers_dir,
+                skip_baseline,
+                dry_run,
+                all_targets,
+                quick,
+                json_output,
+                output_file,
+            };
 
             match run_compat(&root, config) {
                 Ok(true) => ExitCode::SUCCESS,
