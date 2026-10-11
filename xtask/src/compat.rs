@@ -396,7 +396,7 @@ pub fn run_compat(root_dir: &Path, config: CompatConfig) -> Result<bool, String>
             "SKIPPED".to_string()
         } else if config.dry_run {
             println!("  Baseline execution:    SKIPPED (dry run)");
-            "PASS".to_string()
+            "DRY_RUN".to_string()
         } else {
             let cmd_text = format!("cargo {}", test_args.join(" "));
             baseline_cmd_str = Some(cmd_text);
@@ -496,7 +496,7 @@ pub fn run_compat(root_dir: &Path, config: CompatConfig) -> Result<bool, String>
             "INFRASTRUCTURE_FAILURE".to_string()
         } else if config.dry_run {
             println!("  Candidate execution:   SKIPPED (dry run)");
-            "PASS".to_string()
+            "DRY_RUN".to_string()
         } else {
             print!("  Running candidate tests: ");
             let out = Command::new("cargo").current_dir(&cand_worktree_dir).args(&cand_args).env("CARGO_TARGET_DIR", &shared_target_dir).output();
@@ -631,6 +631,7 @@ pub fn classify_status(baseline_result: &str, candidate_result: &str) -> &'stati
         ("SKIPPED", "PASS") => "COMPATIBLE",
         ("SKIPPED", "FAIL") => "CANDIDATE_REGRESSION",
         ("SKIPPED", "SKIPPED") => "SKIPPED",
+        ("DRY_RUN", "DRY_RUN") | ("SKIPPED", "DRY_RUN") => "PROVENANCE_VERIFIED",
         (b, c) if b == "INFRASTRUCTURE_FAILURE" || c == "INFRASTRUCTURE_FAILURE" => "INFRASTRUCTURE_FAILURE",
         (b, c) if b == "INCOMPLETE" || c == "INCOMPLETE" => "INCOMPLETE",
         _ => "INFRASTRUCTURE_FAILURE",
@@ -669,6 +670,8 @@ mod tests {
         assert_eq!(classify_status("FAIL", "PASS"), "FIXED_IN_CANDIDATE");
         assert_eq!(classify_status("SKIPPED", "PASS"), "COMPATIBLE");
         assert_eq!(classify_status("SKIPPED", "FAIL"), "CANDIDATE_REGRESSION");
+        assert_eq!(classify_status("DRY_RUN", "DRY_RUN"), "PROVENANCE_VERIFIED");
+        assert_eq!(classify_status("SKIPPED", "DRY_RUN"), "PROVENANCE_VERIFIED");
         assert_eq!(classify_status("INFRASTRUCTURE_FAILURE", "PASS"), "INFRASTRUCTURE_FAILURE");
         assert_eq!(classify_status("PASS", "INFRASTRUCTURE_FAILURE"), "INFRASTRUCTURE_FAILURE");
         assert_eq!(classify_status("ERROR", "PASS"), "INFRASTRUCTURE_FAILURE");

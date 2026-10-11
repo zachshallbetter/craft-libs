@@ -46,6 +46,7 @@ jobs:
         with:
           path: craft-libs
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Checkout PhotoCraft
         uses: actions/checkout@v4
@@ -84,8 +85,9 @@ jobs:
       - name: Run compatibility validation
         working-directory: craft-libs
         run: |
+          REVISION="${{ github.event.pull_request.head.sha || github.sha }}"
           cargo xtask compat \
-            --revision ${{ github.sha }} \
+            --revision "$REVISION" \
             --consumers ${{ inputs.consumers || 'photocraft,vectorcraft' }} \
             --consumers-dir .. \
             --quick

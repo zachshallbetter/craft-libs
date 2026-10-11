@@ -19,10 +19,11 @@ Every consumer check is evaluated across both runs:
 
 | Baseline | Candidate | Classification | Description | Exit status |
 | :---: | :---: | :--- | :--- | :---: |
-| Pass | Pass | `COMPATIBLE` | Candidate revision preserves application compatibility | 0 |
+| Pass | Pass | `COMPATIBLE` | Candidate revision preserves application compatibility (full test run) | 0 |
 | Pass | Fail | `CANDIDATE_REGRESSION` | Candidate revision introduced a failure | 1 |
 | Fail | Fail | `BASELINE_FAILURE` | Pre-existing failure on consumer's current branch | 0 |
 | Fail | Pass | `FIXED_IN_CANDIDATE` | Candidate resolved an existing issue (observed outcome) | 0 |
+| Dry Run | Dry Run | `PROVENANCE_VERIFIED` | Dependency resolution and worktree isolation verified without running tests | 0 |
 | Error | — / Error | `INFRASTRUCTURE_FAILURE` | Git worktree, network, or environment failure | 1 |
 | Incomplete | — | `INCOMPLETE` | Run cancelled or interrupted mid-execution | 1 |
 | — | — | `SKIPPED` | Consumer directory not found or check skipped | 0 |
