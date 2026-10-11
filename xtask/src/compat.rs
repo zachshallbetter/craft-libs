@@ -205,6 +205,17 @@ pub fn inspect_resolved_craft_ui(dir: &Path, target_pkg: Option<&str>, config_ov
     }
 }
 
+fn extract_test_summary(stdout: &[u8]) -> Option<String> {
+    let s = String::from_utf8_lossy(stdout);
+    for line in s.lines().rev() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("test result:") {
+            return Some(trimmed.to_string());
+        }
+    }
+    None
+}
+
 pub fn run_compat(root_dir: &Path, config: CompatConfig) -> Result<bool, String> {
     println!("Craft Suite Compatibility Validation");
     println!("=======================================================\n");
@@ -394,16 +405,24 @@ pub fn run_compat(root_dir: &Path, config: CompatConfig) -> Result<bool, String>
 
             match out {
                 Ok(o) if o.status.success() => {
-                    println!("PASS");
+                    if let Some(summary) = extract_test_summary(&o.stdout) {
+                        println!("PASS ({summary})");
+                    } else {
+                        println!("PASS");
+                    }
                     baseline_code = o.status.code();
                     fs::write(logs_dir.join(format!("{consumer_name}-baseline.log")), &o.stdout).ok();
                     "PASS".to_string()
                 }
                 Ok(o) => {
-                    println!("FAIL (exit code: {:?})", o.status.code());
-                    baseline_code = o.status.code();
                     let mut log = o.stdout;
                     log.extend_from_slice(&o.stderr);
+                    if let Some(summary) = extract_test_summary(&log) {
+                        println!("FAIL ({summary})");
+                    } else {
+                        println!("FAIL (exit code: {:?})", o.status.code());
+                    }
+                    baseline_code = o.status.code();
                     fs::write(logs_dir.join(format!("{consumer_name}-baseline.log")), &log).ok();
                     "FAIL".to_string()
                 }
@@ -488,16 +507,24 @@ pub fn run_compat(root_dir: &Path, config: CompatConfig) -> Result<bool, String>
 
             match out {
                 Ok(o) if o.status.success() => {
-                    println!("PASS");
+                    if let Some(summary) = extract_test_summary(&o.stdout) {
+                        println!("PASS ({summary})");
+                    } else {
+                        println!("PASS");
+                    }
                     candidate_code = o.status.code();
                     fs::write(&target_log, &o.stdout).ok();
                     "PASS".to_string()
                 }
                 Ok(o) => {
-                    println!("FAIL (exit code: {:?})", o.status.code());
-                    candidate_code = o.status.code();
                     let mut log = o.stdout;
                     log.extend_from_slice(&o.stderr);
+                    if let Some(summary) = extract_test_summary(&log) {
+                        println!("FAIL ({summary})");
+                    } else {
+                        println!("FAIL (exit code: {:?})", o.status.code());
+                    }
+                    candidate_code = o.status.code();
                     fs::write(&target_log, &log).ok();
                     "FAIL".to_string()
                 }

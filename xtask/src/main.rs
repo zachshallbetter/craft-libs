@@ -17,7 +17,8 @@ commands:
 
 options for `compat`:
   --revision <REV>      Target craft-libs revision to validate (commit, branch, or HEAD; default: HEAD)
-  --consumers <LIST>    Comma-separated list of consumers to test (default: photocraft,vectorcraft)
+  --consumers <LIST>    Comma-separated list of consumers to test, or 'all' (default: photocraft,vectorcraft)
+  --all-consumers       Test all known consumers across the Craft suite
   --consumers-dir <DIR> Directory containing consumer checkouts (default: ..)
   --skip-baseline       Skip running baseline checks, only test candidate revision
   --dry-run             Verify worktree creation and dependency resolution without running test suite
@@ -59,9 +60,17 @@ fn main() -> ExitCode {
                             i += 1;
                         }
                     }
+                    "--all-consumers" => {
+                        consumers = compat::KNOWN_CONSUMERS.iter().map(|c| c.name.to_string()).collect();
+                    }
                     "--consumers" => {
                         if i + 1 < args.len() {
-                            consumers = args[i + 1].split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+                            let val = &args[i + 1];
+                            if val == "all" {
+                                consumers = compat::KNOWN_CONSUMERS.iter().map(|c| c.name.to_string()).collect();
+                            } else {
+                                consumers = val.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+                            }
                             i += 1;
                         }
                     }

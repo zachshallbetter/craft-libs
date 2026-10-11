@@ -87,7 +87,8 @@ jobs:
           cargo xtask compat \
             --revision ${{ github.sha }} \
             --consumers ${{ inputs.consumers || 'photocraft,vectorcraft' }} \
-            --consumers-dir ..
+            --consumers-dir .. \
+            --quick
 
       - name: Upload compatibility artifacts
         if: always()
